@@ -6,7 +6,7 @@ Shader "nupamo/autoresize"
         _MarginColor ("Margin Color", Color) = (1,1,1,1)
         _MainTex ("Albedo (RGB)", 2D) = "white" {}
         _Frame ("Frame", Range(0, 5)) = 1
-        _Margin ("Margin", Range(0, 10)) = 2
+        _Margin ("Margin", Range(0, 10)) = 5
     }
     SubShader
     {
@@ -56,13 +56,13 @@ Shader "nupamo/autoresize"
                 // horizon face
                 if (v.normal.y == 0) {
                     v.vertex.y += ratioH * ((v.normal.z == -1) ? -distY : distY);
-                    v.vertex.y += 2 * tX * (f + m) * ((v.normal.z == -1) ? distY : -distY);
+                    v.vertex.y += 2 * tX / scaleY * (f + m) * ((v.normal.z == -1) ? distY : -distY);
                     v.vertex.x += abs(v.normal.z) != 1 ? v.normal.x * tX * (f + m) : 2 * tX * (f + m) * distX;
                 }
                 // vertical face
                 else {
                     v.vertex.y += -v.normal.y * ratioH * 0.5;
-                    v.vertex.y += v.normal.y * tX * (f + m);
+                    v.vertex.y += v.normal.y * tX / scaleY * (f + m);
                     v.vertex.x += 2 * tX * (f + m) * distX;
                 }
             }
@@ -71,14 +71,14 @@ Shader "nupamo/autoresize"
                 // vertical face
                 if (v.normal.x == 0) {
                     v.vertex.x += ratioV * -distX;
-                    v.vertex.x += 2 * tY * (f + m) * distX;
+                    v.vertex.x += 2 * tY / scaleX * (f + m) * distX;
                     v.vertex.y += 2 * tY * (f + m) * ((v.normal.z == -1) ? distY : -distY);
                     v.vertex.y += (abs(v.normal.y) == 1) ? 2 * tY * (f + m) * distY + tY * (f + m) * v.normal.y : 0;
                 }
                 // horizon face
                 else {
                     v.vertex.x += -v.normal.x * ratioV * 0.5;
-                    v.vertex.x += v.normal.x * tY * (f + m);
+                    v.vertex.x += v.normal.x * tY / scaleX * (f + m);
                     v.vertex.y += -2 * tY * (f + m) * distY;
                 }
             }
@@ -88,17 +88,17 @@ Shader "nupamo/autoresize"
         {
             float uvX = IN.uv_MainTex.x;
             float uvY = IN.uv_MainTex.y;
-            float w = uvX * (1 + tX * (f + m) * 2) - tX * (f + m);
-            float h = uvY * (1 + tY * (f + m) * 2) - tY * (f + m);
+            float w = uvX * (1 + tX / scaleX * (f + m) * 2) - tX / scaleX * (f + m);
+            float h = uvY * (1 + tY / scaleY * (f + m) * 2) - tY / scaleY * (f + m);
             fixed4 c = tex2D (_MainTex, float2(w, h));
 
             o.Albedo = lerp(_BorderColor, c.rgb, IN.color);
             o.Alpha = c.a;
 
             // margin
-            o.Albedo = (abs(0.5 - uvX) > 0.5 - tX * (f + m) || abs(0.5 - uvY) > 0.5 - tY * (f + m)) ? lerp(_BorderColor, _MarginColor, IN.color) : o.Albedo;
+            o.Albedo = (abs(0.5 - uvX) > 0.5 - tX / scaleX * (f + m) || abs(0.5 - uvY) > 0.5 - tY / scaleY * (f + m)) ? lerp(_BorderColor, _MarginColor, IN.color) : o.Albedo;
             // border
-            o.Albedo = (abs(0.5 - uvX) > 0.5 - tX * f || abs(0.5 - uvY) > 0.5 - tY * f) ? _BorderColor : o.Albedo;
+            o.Albedo = (abs(0.5 - uvX) > 0.5 - tX / scaleX * f || abs(0.5 - uvY) > 0.5 - tY / scaleY * f) ? _BorderColor : o.Albedo;
         }
         ENDCG
     }
