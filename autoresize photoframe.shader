@@ -15,7 +15,11 @@ Shader "nupamo/AutoResize PhotoFrame"
     }
     SubShader
     {
-        Tags { "RenderType" = "Opaque" }
+        Tags { 
+            "Queue"="Transparent"
+            "IgnoreProjector"="True"
+            "RenderType" = "Transparent" 
+        }
         LOD 200
 
         CGPROGRAM
@@ -25,8 +29,7 @@ Shader "nupamo/AutoResize PhotoFrame"
         struct Input
         {
             float2 uv_MainTex;
-            float2 uv_BumpMap;
-            float color;
+            float color : COLOR;
         };
 
         sampler2D _MainTex;
@@ -47,6 +50,7 @@ Shader "nupamo/AutoResize PhotoFrame"
         static const float ratioV = 1 - tZ / tW;
         static const float f = _Frame * 15;
         static const float m = _Margin * 15;
+        static const float fm = f + m;
         static const float tX = (tZ < tW) ? 0.0005 * (tW / tZ) : 0.0005;
         static const float tY = (tZ >= tW) ? 0.0005 * (tZ / tW) : 0.0005;
 
@@ -64,14 +68,14 @@ Shader "nupamo/AutoResize PhotoFrame"
                 // horizon face
                 if (v.normal.y == 0) {
                     v.vertex.y += ratioH * ((v.normal.z == -1) ? -distY : distY);
-                    v.vertex.y += 2 * tX / scaleY * (f + m) * ((v.normal.z == -1) ? distY : -distY);
-                    v.vertex.x += abs(v.normal.z) != 1 ? v.normal.x * tX * (f + m) * 0.5 : tX * (f + m) * distX;
+                    v.vertex.y += 2 * tX / scaleY * fm * ((v.normal.z == -1) ? distY : -distY);
+                    v.vertex.x += abs(v.normal.z) != 1 ? v.normal.x * tX * fm * 0.5 : tX * fm * distX;
                 }
                 // vertical face
                 else {
                     v.vertex.y += -v.normal.y * ratioH * 0.5;
-                    v.vertex.y += v.normal.y * tX / scaleY * (f + m);
-                    v.vertex.x += tX * (f + m) * distX;
+                    v.vertex.y += v.normal.y * tX / scaleY * fm;
+                    v.vertex.x += tX * fm * distX;
                 }
             }
             // w < h
@@ -79,15 +83,15 @@ Shader "nupamo/AutoResize PhotoFrame"
                 // vertical face
                 if (v.normal.x == 0) {
                     v.vertex.x += ratioV * -distX;
-                    v.vertex.x += 2 * tY / scaleX * (f + m) * distX;
-                    v.vertex.y += tY * (f + m) * ((v.normal.z == -1) ? distY : -distY);
-                    v.vertex.y += (abs(v.normal.y) == 1) ? tY * (f + m) * distY + tY * (f + m) * 0.5 * v.normal.y : 0;
+                    v.vertex.x += 2 * tY / scaleX * fm * distX;
+                    v.vertex.y += tY * fm * ((v.normal.z == -1) ? distY : -distY);
+                    v.vertex.y += (abs(v.normal.y) == 1) ? tY * fm * distY + tY * fm * 0.5 * v.normal.y : 0;
                 }
                 // horizon face
                 else {
                     v.vertex.x += -v.normal.x * ratioV * 0.5;
-                    v.vertex.x += v.normal.x * tY / scaleX * (f + m);
-                    v.vertex.y += -tY * (f + m) * distY;
+                    v.vertex.x += v.normal.x * tY / scaleX * fm;
+                    v.vertex.y += -tY * fm * distY;
                 }
             }
         }
@@ -96,8 +100,8 @@ Shader "nupamo/AutoResize PhotoFrame"
         {
             float uvX = IN.uv_MainTex.x;
             float uvY = IN.uv_MainTex.y;
-            float w = uvX * (1 + tX / scaleX * (f + m) * 2) - tX / scaleX * (f + m);
-            float h = uvY * (1 + tY / scaleY * (f + m) * 2) - tY / scaleY * (f + m);
+            float w = uvX * (1 + tX / scaleX * fm * 2) - tX / scaleX * fm;
+            float h = uvY * (1 + tY / scaleY * fm * 2) - tY / scaleY * fm;
             fixed4 main = tex2D(_MainTex, float2(w, h));
             fixed4 margin = tex2D(_MarginTex, IN.uv_MainTex) * _MarginColor;
             fixed4 frame = tex2D(_FrameTex, IN.uv_MainTex) * _FrameColor;
@@ -106,11 +110,17 @@ Shader "nupamo/AutoResize PhotoFrame"
             fixed a = lerp(frame.a, main.a, IN.color);
 
             // margin
-            c = (abs(0.5 - uvX) > 0.5 - tX / scaleX * (f + m) || abs(0.5 - uvY) > 0.5 - tY / scaleY * (f + m)) ? lerp(frame.rgb, margin.rgb, IN.color) : c;
-            a = (abs(0.5 - uvX) > 0.5 - tX / scaleX * (f + m) || abs(0.5 - uvY) > 0.5 - tY / scaleY * (f + m)) ? lerp(frame.a, margin.a, IN.color) : a;
+            float mX = abs(0.5 - uvX) - (0.5 - tX / scaleX * fm);
+            float mY = abs(0.5 - uvY) - (0.5 - tY / scaleY * fm);
+            float mS = smoothstep(0, 0.15, max(mX, mY) * 100);
+            c = lerp(c, (IN.color > 0) ? margin.rgb : frame.rgb, mS);
+            a = lerp(a, (IN.color > 0) ? margin.a : frame.a, mS);
             // frame
-            c = (abs(0.5 - uvX) > 0.5 - tX / scaleX * f || abs(0.5 - uvY) > 0.5 - tY / scaleY * f) ? frame.rgb : c;
-            a = (abs(0.5 - uvX) > 0.5 - tX / scaleX * f || abs(0.5 - uvY) > 0.5 - tY / scaleY * f) ? frame.a : a;
+            float fX = abs(0.5 - uvX) - (0.5 - tX / scaleX * f);
+            float fY = abs(0.5 - uvY) - (0.5 - tY / scaleY * f);
+            float fS = smoothstep(0, 0.15, max(fX, fY) * 100);
+            c = lerp(c, frame.rgb, fS);
+            a = lerp(a, frame.a, fS);
 
             o.Albedo = lerp(c, 0, _Lit);
             o.Emission = lerp(0, c, _Lit);
