@@ -7,9 +7,9 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Photo Material
+  m_Name: Photo Material(Panorama)
   m_Shader: {fileID: 4800000, guid: 3ab9beb9c87c72346a6abcd7bc6adbb5, type: 3}
-  m_ShaderKeywords: 
+  m_ShaderKeywords: _RATIOAUTO_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -100,7 +100,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _Position: -0.15
-    - _RatioAuto: 0
+    - _RatioAuto: 1
     - _RatioHeight: 9
     - _RatioWidth: 16
     - _Size: 1
